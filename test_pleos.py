@@ -14,11 +14,9 @@ def api_request(url, method="GET", data=None, headers=None):
         body = json.dumps(data).encode("utf-8")
 
     request = urllib.request.Request(
-        url,
-        data=body,
-        headers=headers or {},
-        method=method
+        url, data=body, headers=headers or {}, method=method
     )
+    print("Anropar:", method, url)
 
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
@@ -27,8 +25,7 @@ def api_request(url, method="GET", data=None, headers=None):
         print(f"API-fel: HTTP {error.code}")
         print(error.read().decode("utf-8")[:1500])
         raise
-
-
+        
 def main():
     client_id = os.environ["PLEOS_CLIENT_ID"]
     client_secret = os.environ["PLEOS_CLIENT_SECRET"]
