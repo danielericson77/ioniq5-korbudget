@@ -1,0 +1,19 @@
+
+name: Testa Hyundai API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-pleos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Hamta koden
+        uses: actions/checkout@v4
+
+      - name: Kor Python-test
+        env:
+          PLEOS_CLIENT_ID: ${{ secrets.PLEOS_CLIENT_ID }}
+          PLEOS_CLIENT_SECRET: ${{ secrets.PLEOS_CLIENT_SECRET }}
+        run: python test_pleos.py
