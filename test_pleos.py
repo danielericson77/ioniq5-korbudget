@@ -33,6 +33,9 @@ def main():
     client_id = os.environ["PLEOS_CLIENT_ID"]
     client_secret = os.environ["PLEOS_CLIENT_SECRET"]
 
+print("Anropar:", method, url)
+request = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
+
     print("1. Ansluter till Pleos...")
 
     token_response = api_request(
