@@ -1,0 +1,225 @@
+
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from supabase import create_client
+from datetime import date
+from zoneinfo import ZoneInfo
+
+# --------------------------------
+# INSTÄLLNINGAR
+# --------------------------------
+
+START_DATE = date(2026, 9, 11)
+START_ODOMETER = 0
+YEARLY_LIMIT = 20000       # 2 000 mil
+THREE_YEAR_LIMIT = 60000   # 6 000 mil
+
+st.set_page_config(
+    page_title="IONIQ 5 Körbudget",
+    page_icon="🚗",
+    layout="wide"
+)
+
+st.markdown("""
+<style>
+.stApp {
+    background-color: #101820;
+    color: #f2f4f7;
+}
+[data-testid="stMetric"] {
+    background-color: #1d2935;
+    border: 1px solid #344454;
+    padding: 18px;
+    border-radius: 12px;
+}
+[data-testid="stMetricLabel"] {
+    color: #b8c5d1;
+}
+h1, h2, h3 {
+    color: #f2f4f7;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.title("🚗 IONIQ 5 – Körbudget")
+st.caption("Uppföljning av körsträcka | 2 000 mil per år | 6 000 mil på tre år")
+
+# --------------------------------
+# HÄMTA DATA FRÅN SUPABASE
+# --------------------------------
+
+try:
+    supabase = create_client(
+        st.secrets["SUPABASE_URL"],
+        st.secrets["SUPABASE_SECRET_KEY"]
+    )
+
+    result = (
+        supabase.table("odometer_history")
+        .select("*")
+        .order("recorded_at", desc=False)
+        .execute()
+    )
+
+    df = pd.DataFrame(result.data)
+
+    if df.empty:
+        st.warning("Ingen mätarhistorik finns ännu.")
+        st.stop()
+
+except Exception as e:
+    st.error("Kunde inte hämta data från databasen.")
+    st.code(str(e))
+    st.stop()
+
+# --------------------------------
+# BEARBETA DATA
+# --------------------------------
+
+df["recorded_at"] = pd.to_datetime(
+    df["recorded_at"], utc=True
+).dt.tz_convert("Europe/Stockholm")
+
+df["odometer_km"] = pd.to_numeric(
+    df["odometer_km"]
+)
+
+df = df.sort_values("recorded_at")
+
+latest = df.iloc[-1]
+current_odometer = float(latest["odometer_km"])
+last_reading = latest["recorded_at"]
+
+today = date.today()
+elapsed_days = max((today - START_DATE).days, 0)
+
+elapsed_years = elapsed_days / 365.25
+
+expected_km = YEARLY_LIMIT * elapsed_years
+difference = current_odometer - expected_km
+
+remaining_km = THREE_YEAR_LIMIT - current_odometer
+remaining_days = max(
+    (date(2029, 9, 11) - today).days, 0
+)
+
+remaining_per_day = (
+    remaining_km / remaining_days
+    if remaining_days > 0 else 0
+)
+
+daily_average = (
+    (current_odometer - START_ODOMETER) / elapsed_days
+    if elapsed_days > 0 else 0
+)
+
+progress = current_odometer / THREE_YEAR_LIMIT
+
+# --------------------------------
+# ÖVERSIKT
+# --------------------------------
+
+st.subheader("Aktuell status")
+
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric(
+    "Mätarställning",
+    f"{current_odometer:,.1f} km".replace(",", " ")
+)
+
+c2.metric(
+    "Körda mil",
+    f"{current_odometer / 10:,.1f}".replace(",", " ")
+)
+
+c3.metric(
+    "Snitt per dag",
+    f"{daily_average:.1f} km"
+)
+
+c4.metric(
+    "Kvar till 6 000 mil",
+    f"{remaining_km / 10:,.1f} mil".replace(",", " ")
+)
+
+st.caption(
+    f"Senaste avläsning: {last_reading.strftime('%Y-%m-%d %H:%M')}"
+)
+
+# --------------------------------
+# KÖRBUDGET
+# --------------------------------
+
+st.subheader("Körbudget")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("**Årlig budget – 2 000 mil**")
+    st.metric(
+        "Skillnad mot budget hittills",
+        f"{difference:+,.0f} km".replace(",", " "),
+        help="Positivt värde betyder att du ligger över budget."
+    )
+
+    st.progress(min(max(current_odometer / THREE_YEAR_LIMIT, 0), 1))
+
+with col2:
+    st.markdown("**Treårig budget – 6 000 mil**")
+    st.metric(
+        "Tillåten körning per dag framåt",
+        f"{remaining_per_day:.1f} km"
+    )
+
+st.caption(
+    f"Beräkningen utgår från startdatum {START_DATE} "
+    "och en treårsperiod till 11 september 2029."
+)
+
+# --------------------------------
+# HISTORIKDIAGRAM
+# --------------------------------
+
+st.subheader("Mätarställning över tid")
+
+chart = px.line(
+    df,
+    x="recorded_at",
+    y="odometer_km",
+    markers=True,
+    labels={
+        "recorded_at": "Datum",
+        "odometer_km": "Mätarställning (km)"
+    },
+    template="plotly_dark"
+)
+
+chart.update_layout(
+    paper_bgcolor="#101820",
+    plot_bgcolor="#1d2935",
+    font_color="#f2f4f7"
+)
+
+st.plotly_chart(chart, use_container_width=True)
+
+# --------------------------------
+# HISTORIKTABELL
+# --------------------------------
+
+st.subheader("Avläsningshistorik")
+
+history = df.copy()
+history["Datum"] = history["recorded_at"].dt.strftime(
+    "%Y-%m-%d %H:%M"
+)
+history["Mätarställning (km)"] = history["odometer_km"]
+
+st.dataframe(
+    history[["Datum", "Mätarställning (km)"]].sort_values(
+        "Datum", ascending=False
+    ),
+    use_container_width=True,
+    hide_index=True
+)
