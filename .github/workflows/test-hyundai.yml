@@ -1,0 +1,27 @@
+
+name: Test Hyundai Bluelink
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-hyundai:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Hämta repository
+        uses: actions/checkout@v4
+
+      - name: Installera Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installera Hyundai-bibliotek
+        run: pip install hyundai-kia-connect-api
+
+      - name: Kör Hyundai-test
+        run: python test_hyundai.py
+        env:
+          HYUNDAI_USERNAME: ${{ secrets.HYUNDAI_USERNAME }}
+          HYUNDAI_PASSWORD: ${{ secrets.HYUNDAI_PASSWORD }}
