@@ -191,8 +191,8 @@ c1.metric(
 )
 
 c2.metric(
-    "Körda mil",
-    f"{current_odometer / 10:,.1f}".replace(",", " ")
+    "Tillåten körsträcka idag",
+    f"{allowed_distance_today:,.0f} km".replace(",", " ")
 )
 
 c3.metric(
