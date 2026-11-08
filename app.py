@@ -66,9 +66,20 @@ h2, h3 {
     font-weight: 800 !important;
 }
 
-/* Skillnad mot budget */
-[data-testid="stMetricDelta"] {
-    font-weight: 700 !important;
+/* Positiv utveckling – grönt */
+[data-testid="stMetricDelta"] svg {
+    color: #35d07f !important;
+}
+
+/* Negativ utveckling – rött */
+[data-testid="stMetricDelta"][data-testid*="stMetricDelta"] {
+    font-weight: 800 !important;
+}
+
+/* Tydligare färger på mätarkorten */
+[data-testid="stMetricValue"] {
+    color: #ffffff !important;
+    font-weight: 800 !important;
 }
 
 /* Vanlig text */
