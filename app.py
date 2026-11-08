@@ -63,6 +63,8 @@ try:
     )
 
     df = pd.DataFrame(result.data)
+    st.write("Rådata – endast datumfält:")
+    st.write(result.data)
 
     st.write("Kontroll av data från Supabase:")
     st.write(df)
