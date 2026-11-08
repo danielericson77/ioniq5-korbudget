@@ -197,10 +197,6 @@ c2.metric(
     f"{allowed_distance_today:,.0f} km".replace(",", " ")
 )
 
-c3.metric(
-    "Snitt per dag",
-    f"{daily_average:.1f} km"
-)
 
 
 if pd.notna(last_reading):
