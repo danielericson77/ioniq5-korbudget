@@ -189,7 +189,7 @@ c1, c2, c3, c4 = st.columns(4)
 
 c1.metric(
     "Mätarställning",
-    f"{current_odometer:,.1f} km".replace(",", " ")
+    f"{current_odometer:,.0f} km".replace(",", " ")
 )
 
 c2.metric(
