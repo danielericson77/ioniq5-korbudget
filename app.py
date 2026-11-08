@@ -16,8 +16,7 @@ YEARLY_LIMIT = 20000       # 2 000 mil
 THREE_YEAR_LIMIT = 60000   # 6 000 mil
 
 st.set_page_config(
-    page_title="IONIQ 5 Körbudget",
-    page_icon="🚗",
+    page_title="IONIQ 5 Dashboard",
     layout="wide"
 )
 
