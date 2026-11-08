@@ -17,6 +17,7 @@ THREE_YEAR_LIMIT = 60000   # 6 000 mil
 
 st.set_page_config(
     page_title="IONIQ 5 Dashboard",
+    page_icon="🚗",
     layout="wide"
 )
 
