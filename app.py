@@ -90,6 +90,10 @@ df["odometer_km"] = pd.to_numeric(
 
 df = df.sort_values("recorded_at")
 
+st.write("Kontroll efter databearbetning:")
+st.write(df[["recorded_at", "odometer_km"]])
+st.write("Antal rader:", len(df))
+
 latest = df.iloc[-1]
 current_odometer = float(latest["odometer_km"])
 last_reading = latest["recorded_at"]
