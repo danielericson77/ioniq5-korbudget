@@ -64,6 +64,9 @@ try:
 
     df = pd.DataFrame(result.data)
 
+    st.write("Kontroll av data från Supabase:")
+    st.write(df)
+
     if df.empty:
         st.warning("Ingen mätarhistorik finns ännu.")
         st.stop()
