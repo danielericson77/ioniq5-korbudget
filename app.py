@@ -144,9 +144,12 @@ c4.metric(
     f"{remaining_km / 10:,.1f} mil".replace(",", " ")
 )
 
-st.caption(
-    f"Senaste avläsning: {last_reading.strftime('%Y-%m-%d %H:%M')}"
-)
+if pd.notna(last_reading):
+    st.caption(
+        f"Senaste avläsning: {last_reading.strftime('%Y-%m-%d %H:%M')}"
+    )
+else:
+    st.caption("Senaste avläsning: Saknas")
 
 # --------------------------------
 # KÖRBUDGET
