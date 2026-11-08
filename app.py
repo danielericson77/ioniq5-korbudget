@@ -223,11 +223,12 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown("**Årlig budget – 2 000 mil**")
     st.metric(
-        "Skillnad mot budget hittills",
-        f"{difference:+,.0f} km".replace(",", " "),
-        help="Positivt värde betyder att du ligger över budget."
+    "Skillnad mot budget hittills",
+    f"{difference:+,.0f} km".replace(",", " "),
+    delta="Över budget" if difference > 0 else "Under budget" if difference < 0 else "Exakt på budget",
+    delta_color="inverse",
+    help="Rött betyder att du ligger över budget. Grönt betyder att du ligger under budget."
     )
-
     st.progress(min(max(current_odometer / THREE_YEAR_LIMIT, 0), 1))
 
 with col2:
