@@ -192,10 +192,14 @@ st.caption(
 st.subheader("Faktisk körsträcka jämfört med budget")
 
 # Beräkna tillåten körsträcka för varje datum
-df["datum"] = pd.to_datetime(
+df["recorded_at"] = pd.to_datetime(
     df["recorded_at"], utc=True
-).dt.tz_convert("Europe/Stockholm").dt.normalize()
+)
 
+df["datum"] = (
+    df["recorded_at"]
+    .dt.tz_convert("Europe/Stockholm")
+)
 start_date = pd.Timestamp("2026-09-11", tz="Europe/Stockholm")
 
 elapsed_days = (df["datum"] - start_date).dt.days
