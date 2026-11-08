@@ -225,12 +225,24 @@ with col1:
     st.metric(
     "Skillnad mot budget hittills",
     f"{difference:+,.0f} km".replace(",", " "),
-    delta="Över budget" if difference > 0 else "Under budget" if difference < 0 else "Exakt på budget",
-    delta_color="inverse",
-    help="Rött betyder att du ligger över budget. Grönt betyder att du ligger under budget."
+    help="Positivt värde betyder att du ligger över budget."
     )
-    st.progress(min(max(current_odometer / THREE_YEAR_LIMIT, 0), 1))
 
+    if difference > 0:
+    st.markdown(
+        '<span style="color:#ff5c5c;font-weight:800;">🔴 Över budget</span>',
+        unsafe_allow_html=True
+    )
+    elif difference < 0:
+    st.markdown(
+        '<span style="color:#35d07f;font-weight:800;">🟢 Under budget</span>',
+        unsafe_allow_html=True
+    )
+    else:
+    st.markdown(
+        '<span style="color:#35d07f;font-weight:800;">🟢 Exakt på budget</span>',
+        unsafe_allow_html=True
+    )
 with col2:
     st.markdown("**Treårig budget – 6 000 mil**")
     st.metric(
