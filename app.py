@@ -189,16 +189,16 @@ st.caption(
 st.subheader("Faktisk körsträcka jämfört med budget")
 
 # Beräkna tillåten körsträcka för varje datum
-df["datum"] = pd.to_datetime(df["recorded_at"]).dt.date
+df["datum"] = pd.to_datetime(
+    df["recorded_at"], utc=True
+).dt.tz_convert("Europe/Stockholm").dt.normalize()
 
-start_date = date(2026, 9, 11)
+start_date = pd.Timestamp("2026-09-11", tz="Europe/Stockholm")
 
-df["tillaten_korning"] = df["datum"].apply(
-    lambda d: max(0, (d - start_date).days) * YEARLY_LIMIT / 365.25
-)
+elapsed_days = (df["datum"] - start_date).dt.days
 
-df["tillaten_korning"] = df["datum"].apply(
-    lambda d: max(0, (d - start_date).days) * YEARLY_LIMIT / 365.25
+df["tillaten_korning"] = (
+    elapsed_days.clip(lower=0) * YEARLY_LIMIT / 365.25
 )
 
 # Lägg till startpunkten
