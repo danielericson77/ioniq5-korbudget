@@ -21,24 +21,73 @@ st.set_page_config(
     layout="wide"
 )
 
+
 st.markdown("""
 <style>
+
+/* Huvudbakgrund */
 .stApp {
-    background-color: #101820;
-    color: #f2f4f7;
+    background: linear-gradient(135deg, #0b1420 0%, #172638 100%);
+    color: #ffffff;
 }
+
+/* Huvudrubrik */
+h1 {
+    color: #ffffff !important;
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+}
+
+/* Underrubriker */
+h2, h3 {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+/* Mätarkort */
 [data-testid="stMetric"] {
-    background-color: #1d2935;
-    border: 1px solid #344454;
-    padding: 18px;
+    background: #24364a;
+    border: 1px solid #40566e;
+    padding: 22px 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+/* Etiketter */
+[data-testid="stMetricLabel"] {
+    color: #c5d3e0 !important;
+    font-size: 0.95rem !important;
+}
+
+/* Stora siffror */
+[data-testid="stMetricValue"] {
+    color: #ffffff !important;
+    font-size: 2rem !important;
+    font-weight: 800 !important;
+}
+
+/* Skillnad mot budget */
+[data-testid="stMetricDelta"] {
+    font-weight: 700 !important;
+}
+
+/* Vanlig text */
+.stMarkdown, .stCaption {
+    color: #d6e0ea;
+}
+
+/* Diagram och tabeller */
+[data-testid="stDataFrame"] {
+    border: 1px solid #40566e;
     border-radius: 12px;
 }
-[data-testid="stMetricLabel"] {
-    color: #b8c5d1;
+
+/* Avstånd mellan sektioner */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
 }
-h1, h2, h3 {
-    color: #f2f4f7;
-}
+
 </style>
 """, unsafe_allow_html=True)
 
