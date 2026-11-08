@@ -102,7 +102,7 @@ h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🚗 IONIQ 5 – Körbudget")
+st.title("IONIQ 5 – Dashboard")
 st.caption("Uppföljning av körsträcka | 2 000 mil per år | 6 000 mil på tre år")
 
 # --------------------------------
