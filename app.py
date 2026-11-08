@@ -262,7 +262,6 @@ st.caption(
 # --------------------------------
 # HISTORIKDIAGRAM
 # --------------------------------
-
 st.subheader("Faktisk körsträcka jämfört med budget")
 
 # Beräkna tillåten körsträcka för varje datum
@@ -270,10 +269,10 @@ df["recorded_at"] = pd.to_datetime(
     df["recorded_at"], utc=True
 )
 
-df["datum"] = (
-    df["recorded_at"]
-    .dt.tz_convert("Europe/Stockholm")
+df["datum"] = df["recorded_at"].dt.tz_convert(
+    "Europe/Stockholm"
 )
+
 start_date = pd.Timestamp("2026-09-11", tz="Europe/Stockholm")
 
 elapsed_days = (df["datum"] - start_date).dt.days
@@ -294,10 +293,32 @@ chart_df = pd.concat([
     df[["datum", "odometer_km", "tillaten_korning"]]
 ], ignore_index=True)
 
+chart_df = chart_df.sort_values("datum")
+
+# Dela upp faktisk körsträcka i under och över budget
+chart_df["Under budget"] = chart_df.apply(
+    lambda row: row["odometer_km"]
+    if row["odometer_km"] <= row["tillaten_korning"]
+    else float("nan"),
+    axis=1
+)
+
+chart_df["Över budget"] = chart_df.apply(
+    lambda row: row["odometer_km"]
+    if row["odometer_km"] > row["tillaten_korning"]
+    else float("nan"),
+    axis=1
+)
+
+# Skapa diagrammet
 chart = px.line(
     chart_df,
     x="datum",
-    y=["odometer_km", "tillaten_korning"],
+    y=[
+        "Under budget",
+        "Över budget",
+        "tillaten_korning"
+    ],
     markers=True,
     labels={
         "datum": "Datum",
@@ -306,16 +327,23 @@ chart = px.line(
     },
     template="plotly_dark",
     color_discrete_map={
-        "odometer_km": "#00c2a8",
+        "Under budget": "#35d07f",
+        "Över budget": "#ff5c5c",
         "tillaten_korning": "#f5a623"
     }
 )
 
+# Gör budgetlinjen streckad
+chart.update_traces(
+    line=dict(dash="dash"),
+    selector={"name": "tillaten_korning"}
+)
+
+# Byt namn på budgetlinjen
 chart.for_each_trace(
-    lambda trace: trace.update(
-        name="Faktisk körsträcka" if trace.name == "odometer_km"
-        else "Tillåten körsträcka"
-    )
+    lambda trace: trace.update(name="Tillåten körsträcka")
+    if trace.name == "tillaten_korning"
+    else None
 )
 
 chart.update_layout(
