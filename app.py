@@ -202,10 +202,6 @@ c3.metric(
     f"{daily_average:.1f} km"
 )
 
-c4.metric(
-    "Kvar till 6 000 mil",
-    f"{remaining_km / 10:,.1f} mil".replace(",", " ")
-)
 
 if pd.notna(last_reading):
     st.caption(
