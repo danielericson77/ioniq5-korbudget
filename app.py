@@ -360,7 +360,7 @@ st.plotly_chart(chart, use_container_width=True)
 # --------------------------------
 # HISTORIKTABELL
 # --------------------------------
-
+'''
 st.subheader("Avläsningshistorik")
 
 history = df.copy()
@@ -376,3 +376,4 @@ st.dataframe(
     use_container_width=True,
     hide_index=True
 )
+'''
