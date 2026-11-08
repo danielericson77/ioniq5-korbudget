@@ -57,7 +57,7 @@ try:
 
     result = (
         supabase.table("odometer_history")
-        .select("*")
+        .select("id, created_at, odometer_km")
         .order("recorded_at", desc=False)
         .execute()
     )
@@ -83,7 +83,7 @@ except Exception as e:
 # --------------------------------
 
 df["recorded_at"] = pd.to_datetime(
-    df["recorded_at"], utc=True
+    df["created_at"], utc=True
 ).dt.tz_convert("Europe/Stockholm")
 
 df["odometer_km"] = pd.to_numeric(
