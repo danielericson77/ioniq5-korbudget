@@ -181,28 +181,65 @@ st.caption(
     "och en treårsperiod till 11 september 2029."
 )
 
+
 # --------------------------------
 # HISTORIKDIAGRAM
 # --------------------------------
 
-st.subheader("Mätarställning över tid")
+st.subheader("Faktisk körsträcka jämfört med budget")
+
+# Beräkna tillåten körsträcka för varje datum
+df["datum"] = pd.to_datetime(df["recorded_at"]).dt.date
+
+start_date = date(2026, 9, 11)
+
+df["tillaten_korning"] = df["datum"].apply(
+    lambda d: max(0, (d - start_date).days) * YEARLY_LIMIT / 365.25
+)
+
+# Lägg till startpunkten
+start_row = pd.DataFrame([{
+    "datum": start_date,
+    "odometer_km": 0,
+    "tillaten_korning": 0
+}])
+
+chart_df = pd.concat([
+    start_row,
+    df[["datum", "odometer_km", "tillaten_korning"]]
+], ignore_index=True)
 
 chart = px.line(
-    df,
-    x="recorded_at",
-    y="odometer_km",
+    chart_df,
+    x="datum",
+    y=["odometer_km", "tillaten_korning"],
     markers=True,
     labels={
-        "recorded_at": "Datum",
-        "odometer_km": "Mätarställning (km)"
+        "datum": "Datum",
+        "value": "Körsträcka (km)",
+        "variable": "Typ"
     },
-    template="plotly_dark"
+    template="plotly_dark",
+    color_discrete_map={
+        "odometer_km": "#00c2a8",
+        "tillaten_korning": "#f5a623"
+    }
+)
+
+chart.for_each_trace(
+    lambda trace: trace.update(
+        name="Faktisk körsträcka" if trace.name == "odometer_km"
+        else "Tillåten körsträcka"
+    )
 )
 
 chart.update_layout(
     paper_bgcolor="#101820",
     plot_bgcolor="#1d2935",
-    font_color="#f2f4f7"
+    font_color="#f2f4f7",
+    legend_title_text="",
+    yaxis_title="Körsträcka (km)",
+    xaxis_title="Datum"
 )
 
 st.plotly_chart(chart, use_container_width=True)
