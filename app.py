@@ -197,6 +197,10 @@ df["tillaten_korning"] = df["datum"].apply(
     lambda d: max(0, (d - start_date).days) * YEARLY_LIMIT / 365.25
 )
 
+df["tillaten_korning"] = df["datum"].apply(
+    lambda d: max(0, (d - start_date).days) * YEARLY_LIMIT / 365.25
+)
+
 # Lägg till startpunkten
 start_row = pd.DataFrame([{
     "datum": start_date,
