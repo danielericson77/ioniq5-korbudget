@@ -360,20 +360,20 @@ st.plotly_chart(chart, use_container_width=True)
 # --------------------------------
 # HISTORIKTABELL
 # --------------------------------
-'''
-st.subheader("Avläsningshistorik")
 
-history = df.copy()
-history["Datum"] = history["recorded_at"].dt.strftime(
+# st.subheader("Avläsningshistorik")
+
+# history = df.copy()
+# history["Datum"] = history["recorded_at"].dt.strftime(
     "%Y-%m-%d %H:%M"
-)
-history["Mätarställning (km)"] = history["odometer_km"]
+# )
+# history["Mätarställning (km)"] = history["odometer_km"]
 
-st.dataframe(
-    history[["Datum", "Mätarställning (km)"]].sort_values(
-        "Datum", ascending=False
-    ),
-    use_container_width=True,
-    hide_index=True
-)
-'''
+# st.dataframe(
+#    history[["Datum", "Mätarställning (km)"]].sort_values(
+#        "Datum", ascending=False
+#    ),
+#    use_container_width=True,
+#    hide_index=True
+#)
+
