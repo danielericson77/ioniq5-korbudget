@@ -222,27 +222,30 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("**Årlig budget – 2 000 mil**")
+
     st.metric(
-    "Skillnad mot budget hittills",
-    f"{difference:+,.0f} km".replace(",", " "),
-    help="Positivt värde betyder att du ligger över budget."
+        "Skillnad mot budget hittills",
+        f"{difference:+,.0f} km".replace(",", " "),
+        help="Positivt värde betyder att du ligger över budget."
     )
 
     if difference > 0:
-    st.markdown(
-        '<span style="color:#ff5c5c;font-weight:800;">🔴 Över budget</span>',
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            '<span style="color:#ff5c5c;font-weight:800;">🔴 Över budget</span>',
+            unsafe_allow_html=True
+        )
     elif difference < 0:
-    st.markdown(
-        '<span style="color:#35d07f;font-weight:800;">🟢 Under budget</span>',
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            '<span style="color:#35d07f;font-weight:800;">🟢 Under budget</span>',
+            unsafe_allow_html=True
+        )
     else:
-    st.markdown(
-        '<span style="color:#35d07f;font-weight:800;">🟢 Exakt på budget</span>',
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            '<span style="color:#35d07f;font-weight:800;">🟢 Exakt på budget</span>',
+            unsafe_allow_html=True
+        )
+
+    st.progress(min(max(current_odometer / THREE_YEAR_LIMIT, 0), 1))
 with col2:
     st.markdown("**Treårig budget – 6 000 mil**")
     st.metric(
