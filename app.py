@@ -63,12 +63,7 @@ try:
     )
 
     df = pd.DataFrame(result.data)
-    st.write("Rådata – endast datumfält:")
-    st.write(result.data)
-
-    st.write("Kontroll av data från Supabase:")
-    st.write(df)
-
+    
     if df.empty:
         st.warning("Ingen mätarhistorik finns ännu.")
         st.stop()
@@ -92,8 +87,7 @@ df["odometer_km"] = pd.to_numeric(
 
 df = df.sort_values("recorded_at")
 
-st.write("Kontroll efter databearbetning:")
-st.write(df[["recorded_at", "odometer_km"]])
+
 st.write("Antal rader:", len(df))
 
 latest = df.iloc[-1]
