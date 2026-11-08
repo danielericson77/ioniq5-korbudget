@@ -155,6 +155,8 @@ last_reading = latest["recorded_at"]
 today = date.today()
 elapsed_days = max((today - START_DATE).days, 0)
 
+allowed_distance_today = round(elapsed_days * YEARLY_LIMIT / 365.25)
+
 elapsed_years = elapsed_days / 365.25
 
 expected_km = YEARLY_LIMIT * elapsed_years
