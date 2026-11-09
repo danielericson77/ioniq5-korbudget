@@ -3,7 +3,7 @@ name: Save Hyundai Odometer
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 6 * * *"
+    - cron: "15 2 * * *"
       timezone: "Europe/Stockholm"
 
 jobs:
