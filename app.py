@@ -389,11 +389,40 @@ with tab_elpriser:
         price_df["Tid"] = pd.to_datetime(price_df["time_start"])
         price_df["Pris (öre/kWh)"] = price_df["SEK_per_kWh"] * 100
 
-        st.line_chart(
+                # Beräkna de billigaste 25 % av priserna per dygn
+        price_df["Billig period"] = (
+            price_df.groupby(price_df["Tid"].dt.date)["Pris (öre/kWh)"]
+            .rank(method="first", pct=True) <= 0.25
+        )
+
+        price_df["Prisnivå"] = price_df["Billig period"].map({
+            True: "Billigaste 25 %",
+            False: "Övriga tider"
+        })
+
+        # Skapa diagram
+        chart = px.bar(
             price_df,
             x="Tid",
-            y="Pris (öre/kWh)"
+            y="Pris (öre/kWh)",
+            color="Prisnivå",
+            color_discrete_map={
+                "Billigaste 25 %": "#35d07f",
+                "Övriga tider": "#6c8fb3"
+            },
+            title="Elpriser idag och imorgon"
         )
+
+        chart.update_layout(
+            paper_bgcolor="#101820",
+            plot_bgcolor="#1d2935",
+            font_color="#f2f4f7",
+            legend_title_text="",
+            xaxis_title="Tid",
+            yaxis_title="Pris (öre/kWh)"
+        )
+
+        st.plotly_chart(chart, use_container_width=True)
 
     except Exception as e:
         st.warning("Kunde inte hämta elpriser för idag och imorgon.")
