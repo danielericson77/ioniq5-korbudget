@@ -414,16 +414,16 @@ with tab_elpriser:
         )
 
         chart.update_layout(
-    paper_bgcolor="#101820",
-    plot_bgcolor="#1d2935",
-    font_color="#f2f4f7",
-    legend_title_text="",
-    xaxis_title="Tid",
-    yaxis_title="Pris (öre/kWh)",
-    xaxis=dict(
-        tickformat="%H:%M\n%d %b",
-        dtick=10800000
-    ),
+            paper_bgcolor="#101820",
+            plot_bgcolor="#1d2935",
+            font_color="#f2f4f7",
+            legend_title_text="",
+            xaxis_title="Tid",
+            yaxis_title="Pris (öre/kWh)",
+            xaxis=dict(
+            tickformat="%H:%M\n%d %b",
+            dtick=10800000
+        ),
     yaxis=dict(
         ticksuffix=" öre"
     )
