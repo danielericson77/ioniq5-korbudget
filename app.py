@@ -437,7 +437,7 @@ with tab_elpriser:
         )
     )
 
-        st.plotly_chart(chart, use_container_width=True)
+    st.plotly_chart(chart, use_container_width=True)
 
     except Exception as e:
         st.warning("Kunde inte hämta elpriser för idag och imorgon.")
