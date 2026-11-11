@@ -414,13 +414,28 @@ with tab_elpriser:
         )
 
         chart.update_layout(
-            paper_bgcolor="#101820",
-            plot_bgcolor="#1d2935",
-            font_color="#f2f4f7",
-            legend_title_text="",
-            xaxis_title="Tid",
-            yaxis_title="Pris (öre/kWh)"
-        )
+    paper_bgcolor="#101820",
+    plot_bgcolor="#1d2935",
+    font_color="#f2f4f7",
+    legend_title_text="",
+    xaxis_title="Tid",
+    yaxis_title="Pris (öre/kWh)",
+    xaxis=dict(
+        tickformat="%H:%M\n%d %b",
+        dtick=10800000
+    ),
+    yaxis=dict(
+        ticksuffix=" öre"
+    )
+)
+
+chart.update_traces(
+    hovertemplate=(
+        "%{x|%d %b kl. %H:%M}"
+        "<br>Pris: %{y:.1f} öre/kWh"
+        "<extra>%{fullData.name}</extra>"
+    )
+)
 
         st.plotly_chart(chart, use_container_width=True)
 
