@@ -429,13 +429,13 @@ with tab_elpriser:
     )
 )
 
-chart.update_traces(
-    hovertemplate=(
-        "%{x|%d %b kl. %H:%M}"
-        "<br>Pris: %{y:.1f} öre/kWh"
-        "<extra>%{fullData.name}</extra>"
+    chart.update_traces(
+        hovertemplate=(
+            "%{x|%d %b kl. %H:%M}"
+            "<br>Pris: %{y:.1f} öre/kWh"
+            "<extra>%{fullData.name}</extra>"
+        )
     )
-)
 
         st.plotly_chart(chart, use_container_width=True)
 
