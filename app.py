@@ -371,6 +371,7 @@ with tab_korbudget:
     
     st.plotly_chart(chart, use_container_width=True)
 
+
 with tab_elpriser:
     st.subheader("Elpriser – SE3")
 
@@ -389,7 +390,7 @@ with tab_elpriser:
         price_df["Tid"] = pd.to_datetime(price_df["time_start"])
         price_df["Pris (öre/kWh)"] = price_df["SEK_per_kWh"] * 100
 
-                # Beräkna de billigaste 25 % av priserna per dygn
+        # Beräkna de billigaste 25 % av priserna per dygn
         price_df["Billig period"] = (
             price_df.groupby(price_df["Tid"].dt.date)["Pris (öre/kWh)"]
             .rank(method="first", pct=True) <= 0.25
@@ -421,25 +422,24 @@ with tab_elpriser:
             xaxis_title="Tid",
             yaxis_title="Pris (öre/kWh)",
             xaxis=dict(
-            tickformat="%H:%M\n%d %b",
-            dtick=10800000
-        ),
-    yaxis=dict(
-        ticksuffix=" öre"
-    )
-)
-
-    chart.update_traces(
-        hovertemplate=(
-            "%{x|%d %b kl. %H:%M}"
-            "<br>Pris: %{y:.1f} öre/kWh"
-            "<extra>%{fullData.name}</extra>"
+                tickformat="%H:%M\n%d %b",
+                dtick=10800000
+            ),
+            yaxis=dict(
+                ticksuffix=" öre"
+            )
         )
-    )
 
-    st.plotly_chart(chart, use_container_width=True)
+        chart.update_traces(
+            hovertemplate=(
+                "%{x|%d %b kl. %H:%M}"
+                "<br>Pris: %{y:.1f} öre/kWh"
+                "<extra>%{fullData.name}</extra>"
+            )
+        )
+
+        st.plotly_chart(chart, use_container_width=True)
 
     except Exception as e:
         st.warning("Kunde inte hämta elpriser för idag och imorgon.")
         st.caption(str(e))
-
