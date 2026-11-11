@@ -28,10 +28,15 @@ for vehicle_id, vehicle in vm.vehicles.items():
     print("\nBil hittad!")
 
     attributes = [
-        name for name in dir(vehicle)
-        if "odo" in name.lower()
+    name for name in dir(vehicle)
+    if any(word in name.lower() for word in [
+        "odo",
+        "battery",
+        "soc",
+        "charge",
+        "remain"
+    ])
     ]
-
     print("Mätarställningsfält:", attributes)
 
     for name in attributes:
