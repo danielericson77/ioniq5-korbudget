@@ -136,7 +136,11 @@ h2, h3 {
     padding-top: 2rem;
     padding-bottom: 3rem;
 }
-
+.stButton > button {
+    color: #ffffff !important;
+    background-color: #2563eb !important;
+    border: 1px solid #3b82f6 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
