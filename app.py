@@ -24,7 +24,26 @@ def fetch_electricity_prices(day):
 
     return response.json()
     
+def fetch_hyundai_battery():
+    username = st.secrets["HYUNDAI_USERNAME"]
+    password = st.secrets["HYUNDAI_PASSWORD"]
 
+    vm = VehicleManager(
+        region=1,
+        brand=2,
+        username=username,
+        password=password,
+        pin="",
+        language="sv"
+    )
+
+    vm.check_and_refresh_token()
+    vm.update_all_vehicles_with_cached_state()
+
+    vehicle = next(iter(vm.vehicles.values()))
+
+    return vehicle.ev_battery_percentage
+    
 # --------------------------------
 # INSTÄLLNINGAR
 # --------------------------------
@@ -124,8 +143,11 @@ h2, h3 {
 st.title("IONIQ 5 – Dashboard")
 st.caption("Uppföljning av körsträcka | 2 000 mil per år | 6 000 mil på tre år")
 
-tab_korbudget, tab_elpriser = st.tabs(["Körbudget", "Elpriser"])
-
+tab_korbudget, tab_elpriser, tab_batteri = st.tabs([
+    "Körbudget",
+    "Elpriser",
+    "Batteristatus"
+])
 with tab_korbudget:
     # --------------------------------
     # HÄMTA DATA FRÅN SUPABASE
@@ -445,3 +467,25 @@ with tab_elpriser:
     except Exception as e:
         st.warning("Kunde inte hämta elpriser för idag och imorgon.")
         st.caption(str(e))
+# --------------------------------
+# BATTERISTATUS
+# --------------------------------
+
+with tab_batteri:
+    st.subheader("Hyundai IONIQ 5 – Batteristatus")
+
+    if st.button("Hämta aktuell batteristatus"):
+        with st.spinner("Ansluter till bilen..."):
+            try:
+                battery_percentage = fetch_hyundai_battery()
+
+                st.metric(
+                    "Batterinivå",
+                    f"{battery_percentage:.1f} %"
+                )
+
+                st.success("Batteristatus hämtad från bilen.")
+
+            except Exception as e:
+                st.error("Kunde inte hämta batteristatus.")
+                st.caption(str(e))
