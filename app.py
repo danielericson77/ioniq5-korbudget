@@ -7,6 +7,8 @@ from datetime import date
 from zoneinfo import ZoneInfo
 import requests
 from datetime import datetime, timedelta
+import os
+from hyundai_kia_connect_api import VehicleManager
 
 def fetch_electricity_prices(day):
     year = day.year
