@@ -404,15 +404,23 @@ with tab_elpriser:
     st.subheader("Elpriser – SE3")
 
     st.caption("Spotpriser för idag och imorgon")
-
     today = date.today()
     tomorrow = today + timedelta(days=1)
 
     try:
         today_prices = fetch_electricity_prices(today)
-        tomorrow_prices = fetch_electricity_prices(tomorrow)
 
-        prices = today_prices + tomorrow_prices
+        try:
+            tomorrow_prices = fetch_electricity_prices(tomorrow)
+            prices = today_prices + tomorrow_prices
+            st.caption("Visar priser för idag och imorgon.")
+
+        except Exception:
+            prices = today_prices
+            st.info(
+                "Morgondagens elpriser är ännu inte publicerade. "
+                "Visar endast dagens priser."
+            )
         price_df = pd.DataFrame(prices)
 
         price_df["Tid"] = pd.to_datetime(price_df["time_start"])
