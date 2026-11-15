@@ -565,16 +565,35 @@ with tab_batteri:
     st.subheader("Hyundai IONIQ 5 – Batteristatus")
 
     if st.button("Hämta aktuell batteristatus"):
-        with st.spinner("Ansluter till bilen..."):
+        with st.spinner("Hämtar batteristatus..."):
             try:
-                battery_percentage = fetch_hyundai_battery()
+                battery_percentage, recorded_at, from_database = (
+                    fetch_hyundai_battery()
+                )
 
                 st.metric(
                     "Batterinivå",
                     f"{battery_percentage:.1f} %"
                 )
 
-                st.success("Batteristatus hämtad från bilen.")
+                recorded_time = pd.to_datetime(
+                    recorded_at
+                ).tz_convert("Europe/Stockholm")
+
+                st.caption(
+                    f"Senast hämtad: "
+                    f"{recorded_time.strftime('%Y-%m-%d kl. %H:%M')}"
+                )
+
+                if from_database:
+                    st.info(
+                        "Visar senast sparade värde från databasen. "
+                        "Bilen har inte kontaktats."
+                    )
+                else:
+                    st.success(
+                        "Ny batteristatus hämtad från bilen och sparad."
+                    )
 
             except Exception as e:
                 st.error("Kunde inte hämta batteristatus.")
