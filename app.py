@@ -50,7 +50,7 @@ def fetch_electricity_prices(day):
     response.raise_for_status()
 
     return response.json()
-    def fetch_hyundai_battery():
+def fetch_hyundai_battery():
     # Kontrollera om ett Hyundai-anrop är tillåtet
     supabase = create_client(
         st.secrets["SUPABASE_URL"],
