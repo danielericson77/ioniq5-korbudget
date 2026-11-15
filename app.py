@@ -51,12 +51,12 @@ def fetch_electricity_prices(day):
 
     return response.json()
 def fetch_hyundai_battery():
-    # Kontrollera om ett Hyundai-anrop är tillåtet
     supabase = create_client(
         st.secrets["SUPABASE_URL"],
         st.secrets["SUPABASE_SECRET_KEY"]
     )
 
+    # Kontrollera 15-minutersspärren
     result = supabase.rpc(
         "try_acquire_hyundai_call"
     ).execute()
@@ -64,16 +64,29 @@ def fetch_hyundai_battery():
     control = result.data[0]
 
     if not control["allowed"]:
-        next_allowed = pd.to_datetime(
-            control["next_allowed_at"]
-        ).tz_convert("Europe/Stockholm")
-
-        raise Exception(
-            f"Nästa batterihämtning är tillåten "
-            f"från kl. {next_allowed.strftime('%H:%M')}."
+        # Hämta senaste sparade värdet från databasen
+        history = (
+            supabase.table("battery_history")
+            .select("battery_percentage, recorded_at")
+            .order("recorded_at", desc=True)
+            .limit(1)
+            .execute()
         )
 
-    # Anslut till Hyundai först när spärren godkänt anropet
+        if not history.data:
+            raise Exception(
+                "Ingen tidigare batterimätning finns sparad."
+            )
+
+        latest = history.data[0]
+
+        return (
+            float(latest["battery_percentage"]),
+            latest["recorded_at"],
+            True
+        )
+
+    # Hämta nytt värde från Hyundai
     username = st.secrets["HYUNDAI_USERNAME"]
     password = st.secrets["HYUNDAI_PASSWORD"]
 
@@ -90,8 +103,25 @@ def fetch_hyundai_battery():
     vm.update_all_vehicles_with_cached_state()
 
     vehicle = next(iter(vm.vehicles.values()))
+    battery_percentage = vehicle.ev_battery_percentage
 
-    return vehicle.ev_battery_percentage
+    # Spara den nya mätningen i Supabase
+    saved = (
+        supabase.table("battery_history")
+        .insert({
+            "battery_percentage": battery_percentage
+        })
+        .select("recorded_at")
+        .execute()
+    )
+
+    recorded_at = saved.data[0]["recorded_at"]
+
+    return (
+        float(battery_percentage),
+        recorded_at,
+        False
+    )
 # --------------------------------
 # INSTÄLLNINGAR
 # --------------------------------
