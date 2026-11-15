@@ -50,8 +50,30 @@ def fetch_electricity_prices(day):
     response.raise_for_status()
 
     return response.json()
-    
-def fetch_hyundai_battery():
+    def fetch_hyundai_battery():
+    # Kontrollera om ett Hyundai-anrop är tillåtet
+    supabase = create_client(
+        st.secrets["SUPABASE_URL"],
+        st.secrets["SUPABASE_SECRET_KEY"]
+    )
+
+    result = supabase.rpc(
+        "try_acquire_hyundai_call"
+    ).execute()
+
+    control = result.data[0]
+
+    if not control["allowed"]:
+        next_allowed = pd.to_datetime(
+            control["next_allowed_at"]
+        ).tz_convert("Europe/Stockholm")
+
+        raise Exception(
+            f"Nästa batterihämtning är tillåten "
+            f"från kl. {next_allowed.strftime('%H:%M')}."
+        )
+
+    # Anslut till Hyundai först när spärren godkänt anropet
     username = st.secrets["HYUNDAI_USERNAME"]
     password = st.secrets["HYUNDAI_PASSWORD"]
 
@@ -70,7 +92,6 @@ def fetch_hyundai_battery():
     vehicle = next(iter(vm.vehicles.values()))
 
     return vehicle.ev_battery_percentage
-    
 # --------------------------------
 # INSTÄLLNINGAR
 # --------------------------------
