@@ -10,6 +10,33 @@ from datetime import datetime, timedelta
 import os
 from hyundai_kia_connect_api import VehicleManager
 
+def check_password():
+    if st.session_state.get("authenticated", False):
+        return True
+
+    st.title("IONIQ 5 – Testapp")
+    st.subheader("Logga in")
+
+    with st.form("login_form"):
+        password = st.text_input(
+            "Lösenord",
+            type="password"
+        )
+        submitted = st.form_submit_button("Logga in")
+
+    if submitted:
+        if password == st.secrets["APP_PASSWORD"]:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Fel lösenord. Försök igen.")
+
+    return False
+
+
+if not check_password():
+    st.stop()
+
 def fetch_electricity_prices(day):
     year = day.year
     date_string = day.strftime("%m-%d")
