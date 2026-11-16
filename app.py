@@ -5,7 +5,123 @@ import plotly.express as px
 from supabase import create_client
 from datetime import date
 from zoneinfo import ZoneInfo
+import requests
+from datetime import datetime, timedelta
+import os
+from hyundai_kia_connect_api import VehicleManager
 
+def check_password():
+    if st.session_state.get("authenticated", False):
+        return True
+
+    st.title("IONIQ 5 – Testapp")
+    st.subheader("Logga in")
+
+    with st.form("login_form"):
+        password = st.text_input(
+            "Lösenord",
+            type="password"
+        )
+        submitted = st.form_submit_button("Logga in")
+
+    if submitted:
+        if password == st.secrets["APP_PASSWORD"]:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Fel lösenord. Försök igen.")
+
+    return False
+
+
+if not check_password():
+    st.stop()
+
+def fetch_electricity_prices(day):
+    year = day.year
+    date_string = day.strftime("%m-%d")
+
+    url = (
+        f"https://www.elprisetjustnu.se/api/v1/prices/"
+        f"{year}/{date_string}_SE3.json"
+    )
+
+    response = requests.get(url, timeout=15)
+    response.raise_for_status()
+
+    return response.json()
+def fetch_hyundai_battery():
+    supabase = create_client(
+        st.secrets["SUPABASE_URL"],
+        st.secrets["SUPABASE_SECRET_KEY"]
+    )
+
+    # Kontrollera 15-minutersspärren
+    result = supabase.rpc(
+        "try_acquire_hyundai_call"
+    ).execute()
+
+    control = result.data[0]
+
+    if not control["allowed"]:
+        # Hämta senaste sparade värdet från databasen
+        history = (
+            supabase.table("battery_history")
+            .select("battery_percentage, recorded_at")
+            .order("recorded_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        if not history.data:
+            raise Exception(
+                "Ingen tidigare batterimätning finns sparad."
+            )
+
+        latest = history.data[0]
+
+        return (
+            float(latest["battery_percentage"]),
+            latest["recorded_at"],
+            True
+        )
+
+    # Hämta nytt värde från Hyundai
+    username = st.secrets["HYUNDAI_USERNAME"]
+    password = st.secrets["HYUNDAI_PASSWORD"]
+
+    vm = VehicleManager(
+        region=1,
+        brand=2,
+        username=username,
+        password=password,
+        pin="",
+        language="sv"
+    )
+
+    vm.check_and_refresh_token()
+    vm.update_all_vehicles_with_cached_state()
+
+    vehicle = next(iter(vm.vehicles.values()))
+    battery_percentage = vehicle.ev_battery_percentage
+
+    # Spara den nya mätningen i Supabase
+    saved = (
+        supabase.table("battery_history")
+        .insert({
+            "battery_percentage": battery_percentage
+        })
+        .select("recorded_at")
+        .execute()
+    )
+
+    recorded_at = saved.data[0]["recorded_at"]
+
+    return (
+        float(battery_percentage),
+        recorded_at,
+        False
+    )
 # --------------------------------
 # INSTÄLLNINGAR
 # --------------------------------
@@ -98,257 +214,387 @@ h2, h3 {
     padding-top: 2rem;
     padding-bottom: 3rem;
 }
-
+.stButton > button {
+    color: #ffffff !important;
+    background-color: #2563eb !important;
+    border: 1px solid #3b82f6 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 st.title("IONIQ 5 – Dashboard")
 st.caption("Uppföljning av körsträcka | 2 000 mil per år | 6 000 mil på tre år")
 
-# --------------------------------
-# HÄMTA DATA FRÅN SUPABASE
-# --------------------------------
-
-try:
-    supabase = create_client(
-        st.secrets["SUPABASE_URL"],
-        st.secrets["SUPABASE_SECRET_KEY"]
-    )
-
-    result = (
-        supabase.table("odometer_history")
-        .select("id, created_at, odometer_km")
-        .order("recorded_at", desc=False)
-        .execute()
-    )
-
-    df = pd.DataFrame(result.data)
+tab_korbudget, tab_elpriser, tab_batteri = st.tabs([
+    "Körbudget",
+    "Elpriser",
+    "Batteristatus"
+])
+with tab_korbudget:
+    # --------------------------------
+    # HÄMTA DATA FRÅN SUPABASE
+    # --------------------------------
     
-    if df.empty:
-        st.warning("Ingen mätarhistorik finns ännu.")
-        st.stop()
-
-except Exception as e:
-    st.error("Kunde inte hämta data från databasen.")
-    st.code(str(e))
-    st.stop()
-
-# --------------------------------
-# BEARBETA DATA
-# --------------------------------
-
-df["recorded_at"] = pd.to_datetime(
-    df["created_at"], utc=True
-).dt.tz_convert("Europe/Stockholm")
-
-df["odometer_km"] = pd.to_numeric(
-    df["odometer_km"]
-)
-
-df = df.sort_values("recorded_at")
-
-
-latest = df.iloc[-1]
-current_odometer = float(latest["odometer_km"])
-last_reading = latest["recorded_at"]
-
-today = date.today()
-elapsed_days = max((today - START_DATE).days, 0)
-
-allowed_distance_today = round(elapsed_days * YEARLY_LIMIT / 365.25)
-
-elapsed_years = elapsed_days / 365.25
-
-expected_km = YEARLY_LIMIT * elapsed_years
-difference = current_odometer - expected_km
-
-remaining_km = THREE_YEAR_LIMIT - current_odometer
-remaining_days = max(
-    (date(2029, 9, 11) - today).days, 0
-)
-
-remaining_per_day = (
-    remaining_km / remaining_days
-    if remaining_days > 0 else 0
-)
-
-daily_average = (
-    (current_odometer - START_ODOMETER) / elapsed_days
-    if elapsed_days > 0 else 0
-)
-
-progress = current_odometer / THREE_YEAR_LIMIT
-
-# --------------------------------
-# ÖVERSIKT
-# --------------------------------
-
-st.subheader("Aktuell status")
-
-c1, c2, c3, c4 = st.columns(4)
-
-c1.metric(
-    "Mätarställning",
-    f"{current_odometer:,.0f} km".replace(",", " ")
-)
-
-c2.metric(
-    "Tillåten körsträcka idag",
-    f"{allowed_distance_today:,.0f} km".replace(",", " ")
-)
-
-
-
-if pd.notna(last_reading):
-    st.caption(
-        f"Senaste avläsning: {last_reading.strftime('%Y-%m-%d %H:%M')}"
-    )
-else:
-    st.caption("Senaste avläsning: Saknas")
-
-# --------------------------------
-# KÖRBUDGET
-# --------------------------------
-
-st.subheader("Körbudget")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("**Årlig budget – 2 000 mil**")
-
-    st.metric(
-        "Skillnad mot budget hittills",
-        f"{difference:+,.0f} km".replace(",", " "),
-        help="Positivt värde betyder att du ligger över budget."
-    )
-
-    if difference > 0:
-        st.markdown(
-            '<span style="color:#ff5c5c;font-weight:800;">🔴 Över budget</span>',
-            unsafe_allow_html=True
+    try:
+        supabase = create_client(
+            st.secrets["SUPABASE_URL"],
+            st.secrets["SUPABASE_SECRET_KEY"]
         )
-    elif difference < 0:
-        st.markdown(
-            '<span style="color:#35d07f;font-weight:800;">🟢 Under budget</span>',
-            unsafe_allow_html=True
+    
+        result = (
+            supabase.table("odometer_history")
+            .select("id, created_at, odometer_km")
+            .order("recorded_at", desc=False)
+            .execute()
+        )
+    
+        df = pd.DataFrame(result.data)
+        
+        if df.empty:
+            st.warning("Ingen mätarhistorik finns ännu.")
+            st.stop()
+    
+    except Exception as e:
+        st.error("Kunde inte hämta data från databasen.")
+        st.code(str(e))
+        st.stop()
+    
+    # --------------------------------
+    # BEARBETA DATA
+    # --------------------------------
+    
+    df["recorded_at"] = pd.to_datetime(
+        df["created_at"], utc=True
+    ).dt.tz_convert("Europe/Stockholm")
+    
+    df["odometer_km"] = pd.to_numeric(
+        df["odometer_km"]
+    )
+    
+    df = df.sort_values("recorded_at")
+    
+    
+    latest = df.iloc[-1]
+    current_odometer = float(latest["odometer_km"])
+    last_reading = latest["recorded_at"]
+    
+    today = date.today()
+    elapsed_days = max((today - START_DATE).days, 0)
+    
+    allowed_distance_today = round(elapsed_days * YEARLY_LIMIT / 365.25)
+    
+    elapsed_years = elapsed_days / 365.25
+    
+    expected_km = YEARLY_LIMIT * elapsed_years
+    difference = current_odometer - expected_km
+    
+    remaining_km = THREE_YEAR_LIMIT - current_odometer
+    remaining_days = max(
+        (date(2029, 9, 11) - today).days, 0
+    )
+    
+    remaining_per_day = (
+        remaining_km / remaining_days
+        if remaining_days > 0 else 0
+    )
+    
+    daily_average = (
+        (current_odometer - START_ODOMETER) / elapsed_days
+        if elapsed_days > 0 else 0
+    )
+    
+    progress = current_odometer / THREE_YEAR_LIMIT
+    
+    # --------------------------------
+    # ÖVERSIKT
+    # --------------------------------
+    
+    st.subheader("Aktuell status")
+    
+    c1, c2, c3, c4 = st.columns(4)
+    
+    c1.metric(
+        "Mätarställning",
+        f"{current_odometer:,.0f} km".replace(",", " ")
+    )
+    
+    c2.metric(
+        "Tillåten körsträcka idag",
+        f"{allowed_distance_today:,.0f} km".replace(",", " ")
+    )
+    
+    
+    
+    if pd.notna(last_reading):
+        st.caption(
+            f"Senaste avläsning: {last_reading.strftime('%Y-%m-%d %H:%M')}"
         )
     else:
-        st.markdown(
-            '<span style="color:#35d07f;font-weight:800;">🟢 Exakt på budget</span>',
-            unsafe_allow_html=True
+        st.caption("Senaste avläsning: Saknas")
+    
+    # --------------------------------
+    # KÖRBUDGET
+    # --------------------------------
+    
+    st.subheader("Körbudget")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Årlig budget – 2 000 mil**")
+    
+        st.metric(
+            "Skillnad mot budget hittills",
+            f"{difference:+,.0f} km".replace(",", " "),
+            help="Positivt värde betyder att du ligger över budget."
+        )
+    
+        if difference > 0:
+            st.markdown(
+                '<span style="color:#ff5c5c;font-weight:800;">🔴 Över budget</span>',
+                unsafe_allow_html=True
+            )
+        elif difference < 0:
+            st.markdown(
+                '<span style="color:#35d07f;font-weight:800;">🟢 Under budget</span>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                '<span style="color:#35d07f;font-weight:800;">🟢 Exakt på budget</span>',
+                unsafe_allow_html=True
+            )
+    
+        st.progress(min(max(current_odometer / THREE_YEAR_LIMIT, 0), 1))
+    with col2:
+        st.markdown("**Treårig budget – 6 000 mil**")
+        st.metric(
+            "Tillåten körning per dag framåt",
+            f"{remaining_per_day:.1f} km"
+        )
+    
+    st.caption(
+        f"Beräkningen utgår från startdatum {START_DATE} "
+        "och en treårsperiod till 11 september 2029."
+    )
+    
+    
+    # --------------------------------
+    # HISTORIKDIAGRAM
+    # --------------------------------
+    st.subheader("Faktisk körsträcka jämfört med budget")
+    
+    # Beräkna tillåten körsträcka för varje datum
+    df["recorded_at"] = pd.to_datetime(
+        df["recorded_at"], utc=True
+    )
+    
+    df["datum"] = df["recorded_at"].dt.tz_convert(
+        "Europe/Stockholm"
+    )
+    
+    start_date = pd.Timestamp("2026-09-11", tz="Europe/Stockholm")
+    
+    elapsed_days = (df["datum"] - start_date).dt.days
+    
+    df["tillaten_korning"] = (
+        elapsed_days.clip(lower=0) * YEARLY_LIMIT / 365.25
+    )
+    
+    # Lägg till startpunkten
+    start_row = pd.DataFrame([{
+        "datum": start_date,
+        "odometer_km": 0,
+        "tillaten_korning": 0
+    }])
+    
+    chart_df = pd.concat([
+        start_row,
+        df[["datum", "odometer_km", "tillaten_korning"]]
+    ], ignore_index=True)
+    
+    chart_df = chart_df.sort_values("datum")
+    
+    # Dela upp faktisk körsträcka i under och över budget
+    chart_df["Under budget"] = chart_df.apply(
+        lambda row: row["odometer_km"]
+        if row["odometer_km"] <= row["tillaten_korning"]
+        else float("nan"),
+        axis=1
+    )
+    
+    chart_df["Över budget"] = chart_df.apply(
+        lambda row: row["odometer_km"]
+        if row["odometer_km"] > row["tillaten_korning"]
+        else float("nan"),
+        axis=1
+    )
+    
+    # Skapa diagrammet
+    chart = px.line(
+        chart_df,
+        x="datum",
+        y=[
+            "Under budget",
+            "Över budget",
+            "tillaten_korning"
+        ],
+        markers=True,
+        labels={
+            "datum": "Datum",
+            "value": "Körsträcka (km)",
+            "variable": "Typ"
+        },
+        template="plotly_dark",
+        color_discrete_map={
+            "Under budget": "#35d07f",
+            "Över budget": "#ff5c5c",
+            "tillaten_korning": "#f5a623"
+        }
+    )
+    
+    # Gör budgetlinjen streckad
+    chart.update_traces(
+        line=dict(dash="dash"),
+        selector={"name": "tillaten_korning"}
+    )
+    
+    # Byt namn på budgetlinjen
+    chart.for_each_trace(
+        lambda trace: trace.update(name="Tillåten körsträcka")
+        if trace.name == "tillaten_korning"
+        else None
+    )
+    
+    chart.update_layout(
+        paper_bgcolor="#101820",
+        plot_bgcolor="#1d2935",
+        font_color="#f2f4f7",
+        legend_title_text="",
+        yaxis_title="Körsträcka (km)",
+        xaxis_title="Datum"
+    )
+    
+    st.plotly_chart(chart, use_container_width=True)
+
+
+with tab_elpriser:
+    st.subheader("Elpriser – SE3")
+
+    st.caption("Spotpriser för idag och imorgon")
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+
+    try:
+        today_prices = fetch_electricity_prices(today)
+
+        try:
+            tomorrow_prices = fetch_electricity_prices(tomorrow)
+            prices = today_prices + tomorrow_prices
+            st.caption("Visar priser för idag och imorgon.")
+
+        except Exception:
+            prices = today_prices
+            st.info(
+                "Morgondagens elpriser är ännu inte publicerade. "
+                "Visar endast dagens priser."
+            )
+        price_df = pd.DataFrame(prices)
+
+        price_df["Tid"] = pd.to_datetime(price_df["time_start"])
+        price_df["Pris (öre/kWh)"] = price_df["SEK_per_kWh"] * 100
+
+        # Beräkna de billigaste 25 % av priserna per dygn
+        price_df["Billig period"] = (
+            price_df.groupby(price_df["Tid"].dt.date)["Pris (öre/kWh)"]
+            .rank(method="first", pct=True) <= 0.25
         )
 
-    st.progress(min(max(current_odometer / THREE_YEAR_LIMIT, 0), 1))
-with col2:
-    st.markdown("**Treårig budget – 6 000 mil**")
-    st.metric(
-        "Tillåten körning per dag framåt",
-        f"{remaining_per_day:.1f} km"
-    )
+        price_df["Prisnivå"] = price_df["Billig period"].map({
+            True: "Billigaste 25 %",
+            False: "Övriga tider"
+        })
 
-st.caption(
-    f"Beräkningen utgår från startdatum {START_DATE} "
-    "och en treårsperiod till 11 september 2029."
-)
+        # Skapa diagram
+        chart = px.bar(
+            price_df,
+            x="Tid",
+            y="Pris (öre/kWh)",
+            color="Prisnivå",
+            color_discrete_map={
+                "Billigaste 25 %": "#35d07f",
+                "Övriga tider": "#6c8fb3"
+            },
+            title="Elpriser idag och imorgon"
+        )
 
+        chart.update_layout(
+            paper_bgcolor="#101820",
+            plot_bgcolor="#1d2935",
+            font_color="#f2f4f7",
+            legend_title_text="",
+            xaxis_title="Tid",
+            yaxis_title="Pris (öre/kWh)",
+            xaxis=dict(
+                tickformat="%H:%M\n%d %b",
+                dtick=10800000
+            ),
+            yaxis=dict(
+                ticksuffix=" öre"
+            )
+        )
 
+        chart.update_traces(
+            hovertemplate=(
+                "%{x|%d %b kl. %H:%M}"
+                "<br>Pris: %{y:.1f} öre/kWh"
+                "<extra>%{fullData.name}</extra>"
+            )
+        )
+
+        st.plotly_chart(chart, use_container_width=True)
+
+    except Exception as e:
+        st.warning("Kunde inte hämta elpriser för idag och imorgon.")
+        st.caption(str(e))
 # --------------------------------
-# HISTORIKDIAGRAM
+# BATTERISTATUS
 # --------------------------------
-st.subheader("Faktisk körsträcka jämfört med budget")
 
-# Beräkna tillåten körsträcka för varje datum
-df["recorded_at"] = pd.to_datetime(
-    df["recorded_at"], utc=True
-)
+with tab_batteri:
+    st.subheader("Hyundai IONIQ 5 – Batteristatus")
 
-df["datum"] = df["recorded_at"].dt.tz_convert(
-    "Europe/Stockholm"
-)
+    if st.button("Hämta aktuell batteristatus"):
+        with st.spinner("Hämtar batteristatus..."):
+            try:
+                battery_percentage, recorded_at, from_database = (
+                    fetch_hyundai_battery()
+                )
 
-start_date = pd.Timestamp("2026-09-11", tz="Europe/Stockholm")
+                st.metric(
+                    "Batterinivå",
+                    f"{battery_percentage:.1f} %"
+                )
 
-elapsed_days = (df["datum"] - start_date).dt.days
+                recorded_time = pd.to_datetime(
+                    recorded_at
+                ).tz_convert("Europe/Stockholm")
 
-df["tillaten_korning"] = (
-    elapsed_days.clip(lower=0) * YEARLY_LIMIT / 365.25
-)
+                st.caption(
+                    f"Senast hämtad: "
+                    f"{recorded_time.strftime('%Y-%m-%d kl. %H:%M')}"
+                )
 
-# Lägg till startpunkten
-start_row = pd.DataFrame([{
-    "datum": start_date,
-    "odometer_km": 0,
-    "tillaten_korning": 0
-}])
+                if from_database:
+                    st.info(
+                        "Visar senast sparade värde från databasen. "
+                        "Bilen har inte kontaktats."
+                    )
+                else:
+                    st.success(
+                        "Ny batteristatus hämtad från bilen och sparad."
+                    )
 
-chart_df = pd.concat([
-    start_row,
-    df[["datum", "odometer_km", "tillaten_korning"]]
-], ignore_index=True)
-
-chart_df = chart_df.sort_values("datum")
-
-# Dela upp faktisk körsträcka i under och över budget
-chart_df["Under budget"] = chart_df.apply(
-    lambda row: row["odometer_km"]
-    if row["odometer_km"] <= row["tillaten_korning"]
-    else float("nan"),
-    axis=1
-)
-
-chart_df["Över budget"] = chart_df.apply(
-    lambda row: row["odometer_km"]
-    if row["odometer_km"] > row["tillaten_korning"]
-    else float("nan"),
-    axis=1
-)
-
-# Skapa diagrammet
-chart = px.line(
-    chart_df,
-    x="datum",
-    y=[
-        "Under budget",
-        "Över budget",
-        "tillaten_korning"
-    ],
-    markers=True,
-    labels={
-        "datum": "Datum",
-        "value": "Körsträcka (km)",
-        "variable": "Typ"
-    },
-    template="plotly_dark",
-    color_discrete_map={
-        "Under budget": "#35d07f",
-        "Över budget": "#ff5c5c",
-        "tillaten_korning": "#f5a623"
-    }
-)
-
-# Gör budgetlinjen streckad
-chart.update_traces(
-    line=dict(dash="dash"),
-    selector={"name": "tillaten_korning"}
-)
-
-# Byt namn på budgetlinjen
-chart.for_each_trace(
-    lambda trace: trace.update(name="Tillåten körsträcka")
-    if trace.name == "tillaten_korning"
-    else None
-)
-
-chart.update_layout(
-    paper_bgcolor="#101820",
-    plot_bgcolor="#1d2935",
-    font_color="#f2f4f7",
-    legend_title_text="",
-    yaxis_title="Körsträcka (km)",
-    xaxis_title="Datum"
-)
-
-st.plotly_chart(chart, use_container_width=True)
-
-
+            except Exception as e:
+                st.error("Kunde inte hämta batteristatus.")
+                st.caption(str(e))
