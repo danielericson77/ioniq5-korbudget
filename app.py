@@ -558,29 +558,42 @@ with tab_elpriser:
 # BATTERISTATUS
 # --------------------------------
 
+
 with tab_batteri:
     st.subheader("Hyundai IONIQ 5 – Batteristatus")
 
-    if st.button("Hämta aktuell batteristatus"):
-        with st.spinner("Hämtar batteristatus..."):
-            try:
-                battery_percentage, recorded_at, from_database = (
-                    fetch_hyundai_battery()
-                )
+    try:
+        supabase = create_client(
+            st.secrets["SUPABASE_URL"],
+            st.secrets["SUPABASE_SECRET_KEY"]
+        )
 
-                st.metric(
-                    "Batterinivå",
-                    f"{battery_percentage:.1f} %"
-                )
+        # Hämta senaste sparade batterivärdet
+        history = (
+            supabase.table("battery_history")
+            .select("battery_percentage, recorded_at")
+            .order("recorded_at", desc=True)
+            .limit(1)
+            .execute()
+        )
 
-                recorded_time = pd.to_datetime(
-                    recorded_at
-                ).tz_convert("Europe/Stockholm")
+        battery_percentage = None
+        recorded_at = None
 
-                st.caption(
-                    f"Senast hämtad: "
-                    f"{recorded_time.strftime('%Y-%m-%d kl. %H:%M')}"
-                )
+        if history.data:
+            battery_percentage = float(
+                history.data[0]["battery_percentage"]
+            )
+            recorded_at = history.data[0]["recorded_at"]
+
+        # Knapp för att hämta aktuell status
+        if st.button("Hämta aktuell batteristatus"):
+            with st.spinner("Hämtar batteristatus..."):
+                (
+                    battery_percentage,
+                    recorded_at,
+                    from_database
+                ) = fetch_hyundai_battery()
 
                 if from_database:
                     st.info(
@@ -592,6 +605,25 @@ with tab_batteri:
                         "Ny batteristatus hämtad från bilen och sparad."
                     )
 
-            except Exception as e:
-                st.error("Kunde inte hämta batteristatus.")
-                st.caption(str(e))
+        # Visa alltid senaste tillgängliga värde
+        if battery_percentage is not None:
+            st.metric(
+                "Batterinivå",
+                f"{battery_percentage:.1f} %"
+            )
+
+            recorded_time = pd.to_datetime(
+                recorded_at,
+                utc=True
+            ).tz_convert("Europe/Stockholm")
+
+            st.caption(
+                f"Senast hämtad: "
+                f"{recorded_time.strftime('%Y-%m-%d kl. %H:%M')}"
+            )
+        else:
+            st.info("Ingen batterimätning finns sparad ännu.")
+
+    except Exception as e:
+        st.error("Kunde inte läsa batteristatus.")
+        st.caption(str(e))
