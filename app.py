@@ -300,9 +300,27 @@ with tab_korbudget:
         f"{allowed_distance_today:,.0f} km".replace(",", " ")
     )
     
-    c5.metric(
-    "Avvikelse mot körbudget",
-    f"{budget_deviation_percent:+.1f} %"
+    c5.markdown(
+    f"""
+    <div style="
+        background-color: #1d2935;
+        border: 1px solid #344454;
+        padding: 18px;
+        border-radius: 12px;
+    ">
+        <div style="color: #aab4c0; font-size: 14px;">
+            Avvikelse mot körbudget
+        </div>
+        <div style="
+            color: {'#ef4444' if budget_deviation_percent > 0 else '#22c55e' if budget_deviation_percent < 0 else '#ffffff'};
+            font-size: 28px;
+            font-weight: 600;
+        ">
+            {budget_deviation_percent:+.1f} %
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
     )
     if pd.notna(last_reading):
         st.caption(
