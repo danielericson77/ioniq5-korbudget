@@ -288,7 +288,7 @@ with tab_korbudget:
     
     st.subheader("Aktuell status")
     
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3 = st.columns(3)
     
     c1.metric(
         "Mätarställning",
@@ -300,7 +300,7 @@ with tab_korbudget:
         f"{allowed_distance_today:,.0f} km".replace(",", " ")
     )
     
-    c5.markdown(
+    c3.markdown(
     f"""
     <div style="
         background-color: #1d2935;
