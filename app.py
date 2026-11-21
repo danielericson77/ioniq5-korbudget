@@ -287,7 +287,10 @@ with tab_korbudget:
     
     expected_km = YEARLY_LIMIT * elapsed_years
     difference = current_odometer - expected_km
-    
+    budget_deviation_percent = (
+    difference / expected_km * 100
+    if expected_km > 0 else 0
+    )
     remaining_km = THREE_YEAR_LIMIT - current_odometer
     remaining_days = max(
         (date(2029, 9, 11) - today).days, 0
@@ -311,7 +314,7 @@ with tab_korbudget:
     
     st.subheader("Aktuell status")
     
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     
     c1.metric(
         "Mätarställning",
@@ -323,7 +326,12 @@ with tab_korbudget:
         f"{allowed_distance_today:,.0f} km".replace(",", " ")
     )
     
-    
+    c5.metric(
+    "Avvikelse mot körbudget",
+    f"{budget_deviation_percent:+.1f} %",
+    delta=f"{budget_deviation_percent:+.1f} %",
+    delta_color="inverse"
+    )
     
     if pd.notna(last_reading):
         st.caption(
