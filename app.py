@@ -328,11 +328,8 @@ with tab_korbudget:
     
     c5.metric(
     "Avvikelse mot körbudget",
-    f"{budget_deviation_percent:+.1f} %",
-    delta=f"{budget_deviation_percent:+.1f} %",
-    delta_color="inverse"
+    f"{budget_deviation_percent:+.1f} %"
     )
-    
     if pd.notna(last_reading):
         st.caption(
             f"Senaste avläsning: {last_reading.strftime('%Y-%m-%d %H:%M')}"
