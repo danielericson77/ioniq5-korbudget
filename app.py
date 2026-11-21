@@ -246,6 +246,7 @@ with tab_korbudget:
             .select("id, created_at, odometer_km")
             .order("recorded_at", desc=False)
             .execute()
+            st.write("Supabase-data:", history.data)
         )
     
         df = pd.DataFrame(result.data)
